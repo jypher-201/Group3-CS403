@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { animeList, getNextId } = require("../models/anime.model");
+const { authenticateToken } = require("../middleware/auth.middleware");
 
 router.get("/", (request, response) => {
     response.json(animeList);
@@ -17,7 +18,7 @@ router.get("/:id", (request, response) => {
     response.json(anime);
 });
 
-router.post("/", (request, response) => {
+router.post("/", authenticateToken, (request, response) => {
     const newName = request.body.name;
     const newSeries = request.body.series;
 
@@ -31,7 +32,7 @@ router.post("/", (request, response) => {
     response.status(201).send(newCharacter);
 });
 
-router.put("/:id", (request, response) => {
+router.put("/:id", authenticateToken, (request, response) => {
     const id = Number(request.params.id);
     const anime = animeList.find((a) => a.id === id);
 
@@ -46,7 +47,7 @@ router.put("/:id", (request, response) => {
     response.json(anime);
 });
 
-router.delete("/:id", (request, response) => {
+router.delete("/:id", authenticateToken, (request, response) => {
     const id = Number(request.params.id);
     const index = animeList.findIndex((a) => a.id === id);
 
