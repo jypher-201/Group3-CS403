@@ -1,62 +1,166 @@
 const express = require("express");
 const router = express.Router();
-const { animeList, getNextId } = require("../models/anime.model");
 const { authenticateToken } = require("../middleware/auth.middleware");
+const {
+    createRules,
+    updateRules,
+    idParamRule,
+    validate,
+} = require("../validations/anime.validation");
+const {
+    listAnime,
+    getAnime,
+    addAnime,
+    editAnime,
+    removeAnime,
+} = require("../controllers/anime.controller");
 
-router.get("/", (request, response) => {
-    response.json(animeList);
-});
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Anime:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         name:
+ *           type: string
+ *         series:
+ *           type: string
+ */
 
-router.get("/:id", (request, response) => {
-    const id = Number(request.params.id);
-    const anime = animeList.find((a) => a.id === id);
+/**
+ * @swagger
+ * /anime:
+ *   get:
+ *     summary: List all anime characters
+ *     tags: [Anime]
+ *     responses:
+ *       200:
+ *         description: Array of anime characters
+ */
+router.get("/", listAnime);
 
-    if (!anime) {
-        return response.status(404).json({ error: "Anime not found" });
-    }
+/**
+ * @swagger
+ * /anime/{id}:
+ *   get:
+ *     summary: Get a single anime character by id
+ *     tags: [Anime]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: The anime character
+ *       400:
+ *         description: Invalid id
+ *       404:
+ *         description: Not found
+ */
+router.get("/:id", idParamRule, validate, getAnime);
 
-    response.json(anime);
-});
+/**
+ * @swagger
+ * /anime:
+ *   post:
+ *     summary: Create a new anime character
+ *     tags: [Anime]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, series]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               series:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Created
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Missing access token
+ *       403:
+ *         description: Invalid or expired token
+ */
+router.post("/", authenticateToken, createRules, validate, addAnime);
 
-router.post("/", authenticateToken, (request, response) => {
-    const newName = request.body.name;
-    const newSeries = request.body.series;
+/**
+ * @swagger
+ * /anime/{id}:
+ *   put:
+ *     summary: Update an anime character (owner only)
+ *     tags: [Anime]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               series:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Updated
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Missing access token
+ *       403:
+ *         description: Invalid token, or you did not create this anime
+ *       404:
+ *         description: Not found
+ */
+router.put("/:id", authenticateToken, idParamRule, updateRules, validate, editAnime);
 
-    if (!newName || !newSeries) {
-        return response.status(400).json({ error: "name and series are required" });
-    }
-
-    const newCharacter = { id: getNextId(), name: newName, series: newSeries };
-    animeList.push(newCharacter);
-
-    response.status(201).send(newCharacter);
-});
-
-router.put("/:id", authenticateToken, (request, response) => {
-    const id = Number(request.params.id);
-    const anime = animeList.find((a) => a.id === id);
-
-    if (!anime) {
-        return response.status(404).json({ error: "Anime not found" });
-    }
-
-    const { name, series } = request.body;
-    if (name) anime.name = name;
-    if (series) anime.series = series;
-
-    response.json(anime);
-});
-
-router.delete("/:id", authenticateToken, (request, response) => {
-    const id = Number(request.params.id);
-    const index = animeList.findIndex((a) => a.id === id);
-
-    if (index === -1) {
-        return response.status(404).json({ error: "Anime not found" });
-    }
-
-    animeList.splice(index, 1);
-    response.status(204).send();
-});
+/**
+ * @swagger
+ * /anime/{id}:
+ *   delete:
+ *     summary: Delete an anime character (owner only)
+ *     tags: [Anime]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       204:
+ *         description: Deleted
+ *       400:
+ *         description: Invalid id
+ *       401:
+ *         description: Missing access token
+ *       403:
+ *         description: Invalid token, or you did not create this anime
+ *       404:
+ *         description: Not found
+ */
+router.delete("/:id", authenticateToken, idParamRule, validate, removeAnime);
 
 module.exports = router;

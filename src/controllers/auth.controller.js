@@ -12,16 +12,13 @@ const {
     verifyRefreshToken,
 } = require("../utils/token.util");
 
-async function register(req, res) {
+async function register(req, res, next) {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: "Email and password are required" });
-        }
 
         const existing = await findUserByEmail(email);
         if (existing) {
-            return res.status(400).json({ error: "Email already in use" });
+            return res.status(409).json({ error: "Email already in use" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -29,16 +26,13 @@ async function register(req, res) {
 
         res.status(201).json(user);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 }
 
-async function login(req, res) {
+async function login(req, res, next) {
     try {
         const { email, password } = req.body;
-        if (!email || !password) {
-            return res.status(400).json({ error: "Email and password are required" });
-        }
 
         const user = await findUserByEmail(email);
         if (!user) {
@@ -63,11 +57,11 @@ async function login(req, res) {
 
         res.json({ accessToken, user: { id: user.id, email: user.email } });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 }
 
-async function refresh(req, res) {
+async function refresh(req, res, next) {
     try {
         const token = req.cookies?.refreshToken;
         if (!token) {
@@ -88,7 +82,7 @@ async function refresh(req, res) {
     }
 }
 
-async function logout(req, res) {
+async function logout(req, res, next) {
     try {
         const token = req.cookies?.refreshToken;
         if (token) {
@@ -97,7 +91,7 @@ async function logout(req, res) {
         res.clearCookie("refreshToken");
         res.status(204).send();
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 }
 
